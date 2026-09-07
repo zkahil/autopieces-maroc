@@ -1,0 +1,137 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  ADMIN        // Accès total, gestion utilisateurs, paramètres
+  MANAGER      // Gestion stock, achats, rapports, validation factures
+  VENDEUR      // Facturation, sorties de pièces, clients
+  MAGASINIER   // Entrées/sorties de stock, inventaire
+}
+
+enum MovementType {
+  ENTREE
+  SORTIE
+}
+
+enum InvoiceStatus {
+  BROUILLON
+  VALIDEE
+  PAYEE
+  ANNULEE
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  password      String
+  role          Role      @default(VENDEUR)
+  avatarUrl     String?
+  active        Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  invoices      Invoice[]
+  movements     StockMovement[]
+}
+
+model CarBrand {
+  id       String  @id @default(cuid())
+  name     String  @unique
+  logoUrl  String
+  parts    Part[]
+}
+
+model Category {
+  id     String @id @default(cuid())
+  name   String @unique
+  parts  Part[]
+}
+
+model Supplier {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String?
+  email     String?
+  city      String?
+  parts     Part[]
+  createdAt DateTime @default(now())
+}
+
+model Part {
+  id            String   @id @default(cuid())
+  reference     String   @unique
+  name          String
+  description   String?
+  imageUrl      String?
+  purchasePrice Float
+  salePrice     Float
+  quantity      Int      @default(0)
+  minQuantity   Int      @default(5)
+  brand         CarBrand @relation(fields: [brandId], references: [id])
+  brandId       String
+  category      Category @relation(fields: [categoryId], references: [id])
+  categoryId    String
+  supplier      Supplier? @relation(fields: [supplierId], references: [id])
+  supplierId    String?
+  movements     StockMovement[]
+  invoiceLines  InvoiceLine[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model StockMovement {
+  id         String       @id @default(cuid())
+  type       MovementType
+  quantity   Int
+  reason     String?
+  part       Part         @relation(fields: [partId], references: [id])
+  partId     String
+  user       User         @relation(fields: [userId], references: [id])
+  userId     String
+  createdAt  DateTime     @default(now())
+}
+
+model Client {
+  id        String    @id @default(cuid())
+  name      String
+  phone     String?
+  email     String?
+  ice       String?   // Identifiant Commun de l'Entreprise (Maroc)
+  address   String?
+  city      String?
+  invoices  Invoice[]
+  createdAt DateTime  @default(now())
+}
+
+model Invoice {
+  id          String        @id @default(cuid())
+  number      String        @unique
+  client      Client        @relation(fields: [clientId], references: [id])
+  clientId    String
+  user        User          @relation(fields: [userId], references: [id])
+  userId      String
+  status      InvoiceStatus @default(BROUILLON)
+  totalHT     Float         @default(0)
+  tva         Float         @default(20)
+  totalTTC    Float         @default(0)
+  lines       InvoiceLine[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model InvoiceLine {
+  id         String  @id @default(cuid())
+  invoice    Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  invoiceId  String
+  part       Part    @relation(fields: [partId], references: [id])
+  partId     String
+  quantity   Int
+  unitPrice  Float
+  total      Float
+}

@@ -1,5 +1,5 @@
 // app/layout.tsx
-import { SessionProviderWrapper } from '@/components/SessionProviderWrapper';
+import SessionProviderWrapper from '@/components/SessionProviderWrapper';  // ✅ Import par défaut
 import './globals.css';
 
 export default function RootLayout({
@@ -10,7 +10,6 @@ export default function RootLayout({
   return (
     <html lang="fr">
       <body>
-        {/* ✅ Le provider ne sera chargé que côté client */}
         <SessionProviderWrapper>
           {children}
         </SessionProviderWrapper>
@@ -19,5 +18,5 @@ export default function RootLayout({
   );
 }
 
-// ✅ Ajouter ceci pour éviter la génération statique du layout
+// ✅ Ajouter ceci pour éviter la génération statique
 export const dynamic = 'force-dynamic';

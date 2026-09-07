@@ -5,7 +5,7 @@ import bcrypt from "bcryptjs";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { fetchRealPartPhoto } from "@/lib/images";
-import { MovementType, InvoiceStatus, Role } from "@prisma/client";
+import { MovementType, InvoiceStatus, Role, Prisma } from "@prisma/client";
 
 async function requireUser() {
   const session = await getServerSession(authOptions);
@@ -272,7 +272,7 @@ export async function createInvoice(formData: FormData) {
   const quantities = formData.getAll("quantity") as string[];
   const tva = parseFloat(String(formData.get("tva") || "20"));
 
-  const lines = [];
+  const lines: { partId: string; quantity: number; unitPrice: number; total: number }[] = [];
   for (let i = 0; i < partIds.length; i++) {
     if (!partIds[i]) continue;
     const qty = parseInt(quantities[i] || "0", 10);
@@ -293,7 +293,7 @@ export async function createInvoice(formData: FormData) {
   const count = await prisma.invoice.count();
   const number = `FA-${new Date().getFullYear()}-${String(count + 1).padStart(4, "0")}`;
 
-  await prisma.$transaction(async (tx) => {
+  await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     await tx.invoice.create({
       data: {
         number,
@@ -338,7 +338,7 @@ export async function updateInvoiceStatus(invoiceId: string, status: InvoiceStat
 
   // Annulation : on remet les pièces en stock si la facture n'était pas déjà annulée.
   if (status === InvoiceStatus.ANNULEE && invoice.status !== InvoiceStatus.ANNULEE) {
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       for (const l of invoice.lines) {
         await tx.part.update({
           where: { id: l.partId },
@@ -373,7 +373,7 @@ export async function deleteInvoice(invoiceId: string) {
     include: { lines: true },
   });
 
-  await prisma.$transaction(async (tx) => {
+  await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     // Restocke les pièces si la facture n'était pas déjà annulée avant suppression.
     if (invoice.status !== InvoiceStatus.ANNULEE) {
       for (const l of invoice.lines) {

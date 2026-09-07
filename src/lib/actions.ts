@@ -1,3 +1,5 @@
+// src/lib/actions.ts
+
 "use server";
 import { revalidatePath } from "next/cache";
 import { getServerSession } from "next-auth";
@@ -44,7 +46,19 @@ export async function createPart(formData: FormData) {
   await requireUser();
   const fields = partFieldsFromForm(formData);
   const manualImage = String(formData.get("imageUrl") || "").trim();
-  const imageUrl = manualImage || (await fetchRealPartPhoto(fields.name));
+  
+  // ✅ CORRECTION : passer un objet au lieu d'une string
+  let imageUrl = manualImage;
+  if (!imageUrl && fields.name) {
+    try {
+      imageUrl = await fetchRealPartPhoto({ 
+        partName: fields.name 
+      });
+    } catch (error) {
+      console.error("Error fetching image:", error);
+      imageUrl = "/placeholder-parts.jpg";
+    }
+  }
 
   await prisma.part.create({ data: { ...fields, imageUrl } });
   revalidatePath("/dashboard/pieces");
@@ -68,7 +82,17 @@ export async function updatePart(formData: FormData) {
 export async function refreshPartPhoto(id: string) {
   await requireUser();
   const part = await prisma.part.findUniqueOrThrow({ where: { id } });
-  const imageUrl = await fetchRealPartPhoto(part.name);
+  
+  // ✅ CORRECTION : passer un objet au lieu d'une string
+  let imageUrl = "/placeholder-parts.jpg";
+  try {
+    imageUrl = await fetchRealPartPhoto({ 
+      partName: part.name 
+    });
+  } catch (error) {
+    console.error("Error refreshing image:", error);
+  }
+  
   await prisma.part.update({ where: { id }, data: { imageUrl } });
   revalidatePath("/dashboard/pieces");
 }

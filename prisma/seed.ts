@@ -144,7 +144,10 @@ async function main() {
     const ref = `PC-${String(i + 1).padStart(4, "0")}`;
     const purchasePrice = Math.round((50 + Math.random() * 900) * 10) / 10;
     console.log(`  → photo réelle pour: ${partNames[i]}`);
-    const imageUrl = await fetchRealPartPhoto(partNames[i]);
+   const imageUrl = await fetchRealPartPhoto({
+  partName: partNames[i],
+  brand: brands[Math.floor(Math.random() * brands.length)],
+});
     const part = await prisma.part.create({
       data: {
         reference: ref,

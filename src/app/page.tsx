@@ -1,8 +1,17 @@
-import { redirect } from "next/navigation";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+// app/page.tsx
+import { redirect } from 'next/navigation';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 
 export default async function Home() {
   const session = await getServerSession(authOptions);
-  redirect(session ? "/dashboard" : "/login");
+  
+  if (session) {
+    redirect('/dashboard');
+  } else {
+    redirect('/login');
+  }
 }
+
+// ✅ Ajouter pour le rendu dynamique
+export const dynamic = 'force-dynamic';

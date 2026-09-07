@@ -1,51 +1,50 @@
 // src/lib/images.ts
-interface ImageParams {
+// Ajouter cette fonction si elle manque
+
+interface PartPhotoParams {
+  brand?: string;
+  model?: string;
+  partName?: string;
   width?: number;
   height?: number;
-  fit?: 'cover' | 'contain' | 'fill' | 'inside' | 'outside';
-  quality?: number;
-  format?: 'webp' | 'jpeg' | 'png';
 }
 
-export function getImageUrl(url: string, params: ImageParams = {}): string {
+export async function fetchRealPartPhoto(params: PartPhotoParams): Promise<string> {
   try {
-    // Vérifier que l'URL est valide
-    if (!url || typeof url !== 'string') {
-      console.warn('Invalid image URL:', url);
-      return '/placeholder-image.jpg';
-    }
-
-    // Nettoyer les paramètres
-    const cleanParams: Record<string, string> = {};
+    // Construction de l'URL avec paramètres sécurisés
+    const searchParams = new URLSearchParams();
     
-    if (params.width && params.width > 0) {
-      cleanParams.width = params.width.toString();
-    }
-    if (params.height && params.height > 0) {
-      cleanParams.height = params.height.toString();
-    }
-    if (params.fit) {
-      cleanParams.fit = params.fit;
-    }
-    if (params.quality && params.quality > 0 && params.quality <= 100) {
-      cleanParams.quality = params.quality.toString();
-    }
-    if (params.format) {
-      cleanParams.format = params.format;
+    if (params.brand) searchParams.append('brand', params.brand);
+    if (params.model) searchParams.append('model', params.model);
+    if (params.partName) searchParams.append('part', params.partName);
+    if (params.width) searchParams.append('width', params.width.toString());
+    if (params.height) searchParams.append('height', params.height.toString());
+
+    const baseUrl = process.env.NEXT_PUBLIC_PHOTO_API_URL || 'https://api.unsplash.com/photos/random';
+    
+    // Exemple avec Unsplash
+    const query = [params.brand, params.model, params.partName].filter(Boolean).join(' ');
+    if (query) {
+      searchParams.append('query', query);
     }
 
-    // Construire l'URL avec les paramètres
-    const baseUrl = process.env.NEXT_PUBLIC_IMAGE_SERVICE_URL || '';
-    if (baseUrl) {
-      const searchParams = new URLSearchParams(cleanParams);
-      return `${baseUrl}${url}?${searchParams.toString()}`;
+    const url = `${baseUrl}?${searchParams.toString()}`;
+    
+    const response = await fetch(url, {
+      headers: {
+        'Authorization': `Client-ID ${process.env.UNSPLASH_ACCESS_KEY}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch photo: ${response.status}`);
     }
 
-    // Fallback: retourner l'URL sans traitement
-    return url;
+    const data = await response.json();
+    return data.urls?.regular || '/placeholder-parts.jpg';
 
   } catch (error) {
-    console.error('Error building image URL:', error);
-    return url || '/placeholder-image.jpg';
+    console.error('Error fetching part photo:', error);
+    return '/placeholder-parts.jpg';
   }
 }
